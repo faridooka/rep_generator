@@ -1,13 +1,17 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 import openai
 import os
 
 app = Flask(__name__)
 
-# 🔐 OpenAI API ключ берётся из переменной окружения Render
+# 🔓 Разрешаем CORS только для фронтенда cliledu.kz
+CORS(app, resources={r"/*": {"origins": "https://cliledu.kz"}})
+
+# 🔐 OpenAI API ключ
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-# 🧰 Онлайн-құралдар тізімі
+# 🧰 Онлайн-құралдар
 TOOLS = {
     "Padlet": "https://padlet.com",
     "Mentimeter": "https://www.mentimeter.com",
@@ -28,7 +32,7 @@ def generate_reflection():
 
     clil_components = ", ".join(components)
 
-    # 📄 Промпт для OpenAI
+    # 📄 Промпт для генерации
     prompt = (
         f"Мұғалім ретінде {grade}-сыныпқа арналған информатика сабағына арналған рефлексия сұрақтарын дайында. "
         f"Тақырып: {topic}. CLIL компоненттері: {clil_components}. Bloom таксономиясы: {bloom}. "
@@ -44,7 +48,7 @@ def generate_reflection():
 
         answer = response['choices'][0]['message']['content']
 
-        # 🧩 HTML блок с онлайн-құралдармен
+        # 🔧 Цифрлық құралдар HTML
         tools_html = "<h4>🔧 Ұсынылатын цифрлық құралдар:</h4><ul>"
         for name, url in TOOLS.items():
             tools_html += f'<li><a href="{url}" target="_blank">{name}</a></li>'
@@ -54,3 +58,6 @@ def generate_reflection():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+if __name__ == "__main__":
+    app.run()
