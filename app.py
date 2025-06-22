@@ -3,8 +3,11 @@ import openai
 import os
 
 app = Flask(__name__)
+
+# 🔐 OpenAI API ключ берётся из переменной окружения Render
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
+# 🧰 Онлайн-құралдар тізімі
 TOOLS = {
     "Padlet": "https://padlet.com",
     "Mentimeter": "https://www.mentimeter.com",
@@ -16,17 +19,20 @@ TOOLS = {
 @app.route("/generate_reflection", methods=["POST"])
 def generate_reflection():
     data = request.get_json()
+
     topic = data.get("topic", "")
     grade = data.get("grade", "")
     bloom = data.get("bloom", "")
     reflex_type = data.get("reflexType", "")
     components = data.get("components", [])
 
-    clil = ", ".join(components)
+    clil_components = ", ".join(components)
+
+    # 📄 Промпт для OpenAI
     prompt = (
-        f"Мектеп мұғалімі ретінде {grade}-сыныпқа арналған информатика сабағы бойынша рефлексия сұрақтарын құрастыр. "
-        f"Тақырып: {topic}. CLIL компоненттері: {clil}. Bloom таксономиясы: {bloom}. "
-        f"Рефлексия әдісі: {reflex_type}. 5 сұрақ бер және соңында 3 цифрлық құрал ұсын (сілтемелерімен)."
+        f"Мұғалім ретінде {grade}-сыныпқа арналған информатика сабағына арналған рефлексия сұрақтарын дайында. "
+        f"Тақырып: {topic}. CLIL компоненттері: {clil_components}. Bloom таксономиясы: {bloom}. "
+        f"Рефлексия әдісі: {reflex_type}. 5 нақты сұрақ дайында және соңында 3 онлайн құралды ұсын (сілтемелерімен)."
     )
 
     try:
@@ -35,14 +41,21 @@ def generate_reflection():
             messages=[{"role": "user", "content": prompt}],
             temperature=0.7
         )
-        answer = response.choices[0].message.content
 
-        # HTML-инструменты
+        answer = response['choices'][0]['message']['content']
+
+        # 🧩 HTML блок с онлайн-құралдармен
         tools_html = "<h4>🔧 Ұсынылатын цифрлық құралдар:</h4><ul>"
         for name, url in TOOLS.items():
             tools_html += f'<li><a href="{url}" target="_blank">{name}</a></li>'
         tools_html += "</ul>"
 
         return jsonify({"questions": answer + tools_html})
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+# 🌐 Запуск приложения на нужном порту
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
